@@ -1,0 +1,58 @@
+MAIN Screen:
+	Init:
+	-Draw Main screen
+	Loop:
+	-Refresh display (move POIs in radar and add/sub POIs depending on range)
+	-if VIEW:
+		-go to VIEW_SELECTION
+	-if MARK:
+		-go to MARK
+	-if NEAR OBJ:
+		-go to ALERT(type)
+
+VIEW_SELECTION:
+	Init:
+	-Draw Box around nearest
+	Loop:
+	-if ENC_RIGHT:
+		-go to next closest POI
+	-if ENC_LEFT:
+		-go to closer POI
+	-if SELECT:
+		-go to INFO
+	-if CANCEL:
+		-go to MAIN
+
+INFO:
+	Init:
+	-given POI/Danger, draws INFO screen with information populated
+	Loop:
+	-if GO BACK:
+		-go to VIEW SELECTION
+
+MARK:
+	Init:
+	-Draw MARK screen
+	Loop:
+	-if CANCEL:
+		-go to MAIN
+	-if MARK:
+		-go to MARK_CONFIRM
+
+MARK_CONFIRM:
+	Init:
+	-Draw INFO (blank TAG input)
+	Loop:
+	-if CANCEL:
+		-go to MARK
+	-if CONFIRM:
+		-go to MAIN
+
+ALERT-Interest:
+	Init:
+	-Draw ALERT(type INTEREST)
+	Loop:
+	-if DISMISS:
+		-go to MAIN
+	-if VIEW:
+		-go to INFO(object_key)
