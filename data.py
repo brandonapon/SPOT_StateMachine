@@ -10,12 +10,13 @@ class Point:
     '''
     def __init__(self, name):
         self.name = name
+        self.key = ''
         self.tag = ''
         self.createdBy = ''
         self.type = ''
         self.picture = ''
         self.isVisible = False
-        # self.distance =
+        self.distance = ''
         self.gpsLocation = (0,0) # gps location (from actual GPS, static)
         self.currentLocation = (0,0) # current location of the point relative to user
         self.markedLocation = (0,0) # visible marked location
@@ -102,16 +103,17 @@ class Radar:
     '''
     def makeHidden(self, key):
         point = self.points[key]
-        point.isVisible = False
-        self.visible.remove(key)
-        if point.type == 'ALERT':
-            self.device.drawAlert(point.markedLocation[0], point.markedLocation[1], 0x0000)
-        elif point.type == 'INTEREST':
-            self.device.drawInterest(point.markedLocation[0], point.markedLocation[1], 0x0000)
-        elif point.type == 'CRUMB':
-            pass
-        else:
-            pass
+        if(point.isVisible == True):
+            point.isVisible = False
+            self.visible.remove(key)
+            if point.type == 'ALERT':
+                self.device.drawAlert(point.markedLocation[0], point.markedLocation[1], 0x0000)
+            elif point.type == 'INTEREST':
+                self.device.drawInterest(point.markedLocation[0], point.markedLocation[1], 0x0000)
+            elif point.type == 'CRUMB':
+                pass
+            else:
+                pass
         point.markedLocation = (0,0)
 
 
@@ -146,7 +148,7 @@ class Radar:
     '''
     def updateRadar(self):
         for key, point in self.points.items():
-            distance = math.sqrt((point.currentLocation[0] - point.markedLocation[0])**2 + (point.currentLocation[1] - point.markedLocation[1])**2)
+            distance = math.sqrt((self.userLocation[0] - point.markedLocation[0])**2 + (self.userLocation[1] - point.markedLocation[1])**2)
             if distance > 30:
                 # Check if point is in REDRAW list
                 # If it is, remove it if distance greater than 30m
@@ -167,30 +169,25 @@ class Radar:
             print('Key: ' + str(key))
             point = self.points[key]
             print('TYPE: ' + point.type)
-            # print(point.markedLocation)
-            # print(point.markedLocation[0], point.markedLocation[1])
             x, y = self.getDisplayCoordinates(point.markedLocation[0], point.markedLocation[1])
 
-            if point.type == 'ALERT':
-                # remove old point
-                # update marked location
-                # add new point
-                # print('ALERT')
-                self.device.drawAlert(x, y, 0x0000)
+            if point.type == 'DANGER':
+                self.device.drawDanger(x, y, 0x0000)
                 point.markedLocation = point.currentLocation
                 x, y = self.getDisplayCoordinates(point.markedLocation[0], point.markedLocation[1])
-                self.device.drawAlert(x, y, 0xf800)
-                # print('ALERT DRAWN')
+                self.device.drawDanger(x, y, 0xf800)
 
             elif point.type == 'INTEREST':
-                # print('INTEREST')
                 self.device.drawInterest(x, y, 0x0000)
                 point.markedLocation = point.currentLocation
                 x, y = self.getDisplayCoordinates(point.markedLocation[0], point.markedLocation[1])
                 self.device.drawInterest(x, y, 0x001f)
 
             elif point.type == 'CRUMB':
-                print('CRUMB')
+                self.device.drawCrumb(x, y, 0x0000)
+                point.markedLocation = point.currentLocation
+                x, y = self.getDisplayCoordinates(point.markedLocation[0], point.markedLocation[1])
+                self.device.drawCrumb(x, y, 0xf81f)
 
             else:
                 print('WHOOPS')

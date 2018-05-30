@@ -18,6 +18,8 @@ class SPOT(State):
 		"""
 		self.device = device
 		self.radar = Radar(device)
+		device.setImageAddress()
+		device.beginTX(1)
 		# self.radar.points = dict([(i, Point('point_{}'.format(i))) for i in range(0, 10)])
 		# self.radar.getDisplayCoordinates(thing1, thing2)
 
@@ -38,6 +40,9 @@ class SPOT(State):
 		Based on state, will call state's loop function in event loop
 		'''
 		self.state.loop()
+		# receive testing
+		# if self.device.hasMessages():
+		# 	print(self.device.readFromTX())
 
 # def createTimestamp(): #unnecesary?
 # 	timestamp = time.time()
@@ -83,6 +88,10 @@ class MainState(SPOT):
 		self.parent = parent
 		parent.device.clearAll()
 		parent.device.drawMainScreen() # Main
+		for val in parent.radar.visible:
+			parent.radar.redraw.append(val)
+		parent.radar.refresh()
+
 		#REDRAW ALL VISIBLE
 
 	def on_event(self, event):
@@ -116,6 +125,7 @@ class ViewState(SPOT):
 		parent.device.drawViewScreen() # View
 		""" ADDED """
 		# parent.device.layer(1)
+		# points = parent.device.radar.points
 		""" >> DRAW POINTS HERE << """
 
 	def on_event(self, event):
@@ -125,7 +135,7 @@ class ViewState(SPOT):
 		if event == 'TOP':
 			return MainState(self.parent)
 		elif event == 'BOTTOM':
-			return InfoState(self.parent)
+			return InfoState(self.parent, )
 		return self
 
 	def loop(self):
@@ -143,10 +153,13 @@ class InfoState(SPOT):
 	button = ''
 	parent = None
 
-	def __init__(self, parent):
+	def __init__(self, parent, key):
 		self.parent = parent
 		parent.device.clearAll()
 		parent.device.drawSelectView()
+		parent.device.displayTag(parent.device.radar.points[key].tag)
+		parent.device.displayDistance(parent.device.radar.points[key].distance)
+		parent.device.displayCreatedBy(parent.device.radar.points[key].createdBy)
 
 	def on_event(self, event):
 		if event == 'TOP':
@@ -181,7 +194,6 @@ class MarkState(SPOT):
 		if event == 'TOP':
 			return MainState(self.parent)
 		elif event == 'BOTTOM':
-			self.parent.device.prepareToSend()
 			return ConfirmState(self.parent)
 		return self
 
@@ -211,8 +223,17 @@ class ConfirmState(SPOT):
 		# distance = parent.device.range_poll()
 		# gps = parent.device.readFromGPS()
 		# pic = parent.device.snapPic(0,0)
+
 		parent.device.clearAll()
 		parent.device.drawAfterMark()
+		parent.device.prepareToSend()
+		# parent.device.draw2X(100,15,15, 0xf800)
+		parent.device.snapPic(0,0)
+		# parent.device.draw2X(150,15,15, 0xf800)
+		parent.device.conversion()
+		parent.device.beginCameraTransfer(4)
+		parent.device.writeToTX(4, 'd')
+
 
 	def on_event(self, event):
 		if event == 'TOP':
@@ -253,7 +274,7 @@ class AlertState(SPOT):
 		if event == 'TOP':
 			return MainState(self.parent)
 		elif event == 'BOTTOM':
-			return InfoState(self.parent)
+			return InfoState(self.parent, key)
 		return self
 
 	def loop(self):
