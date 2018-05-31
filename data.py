@@ -1,4 +1,5 @@
 import math
+import pickle
 
 class Point:
     '''
@@ -21,15 +22,15 @@ class Point:
         self.currentLocation = (0,0) # current location of the point relative to user
         self.markedLocation = (0,0) # visible marked location
 
-    '''
-    Saves picture from DDR (be it from Transceiver or Camera)
-    CPICKLE
-    '''
-    def savePicture(self, array):
-        fileObject = open("picture_{}.txt".format(self.name), "w")
-        fileObject.write(array)
-        fileObject.close()
-        # INCOMPLETE
+    # '''
+    # Saves picture from DDR (be it from Transceiver or Camera)
+    # CPICKLE
+    # '''
+    # def savePicture(self, array):
+    #     fileObject = open("picture_{}.txt".format(self.name), "w")
+    #     fileObject.write(array)
+    #     fileObject.close()
+    #     # INCOMPLETE
 
     # '''
     # Calculates distance based on USER location and the POI
@@ -64,6 +65,27 @@ class Radar:
         self.points[len(self.points) + 1] = point
 
     '''
+    id = string
+    tag = string
+    createdBy = string
+    gpsLoc = tuple
+    objectType = string
+    '''
+    def createPoint(self, id, tag, createdBy, gpsLoc, objectType):
+        newPoint = point(id)
+        newPoint.tag = tag
+        newPoint.createdBy = createdBy
+        newPoint.gpsLocation = gpsLoc
+        newPoint.type = objectType
+        self.addPoint(newPoint)
+
+    '''
+    Saves picture from DDR using pickle
+    saves in RGB332 format
+    '''
+    def savePicture(self, ddr):
+
+    '''
     Converts meters to pixels.
     '''
     def convertToPixels(self, x, y):
@@ -74,7 +96,7 @@ class Radar:
     '''
     def getDisplayCoordinates(self, x, y):
         pixels_x, pixels_y = self.convertToPixels(x, y)
-        point_x, point_y = 266 + pixels_x, 240 - pixels_y
+        point_x, point_y = int(266 + pixels_x), int(240 - pixels_y)
         return point_x, point_y
 
     '''
@@ -148,17 +170,18 @@ class Radar:
     '''
     def updateRadar(self):
         for key, point in self.points.items():
-            distance = math.sqrt((self.userLocation[0] - point.markedLocation[0])**2 + (self.userLocation[1] - point.markedLocation[1])**2)
-            if distance > 30:
-                # Check if point is in REDRAW list
-                # If it is, remove it if distance greater than 30m
-                if point in self.redraw:
-                    self.redraw.remove(point)
-                self.makeHidden(key)
-            elif distance <= 30 and point.isVisible == False:
-                self.makeVisible(key)
-                # Add point to REDRAW list
-                # self.redraw.append(point)
+            if key not in self.visible:
+                distance = math.sqrt((self.userLocation[0] - point.gpsLocation[0])**2 + (self.userLocation[1] - point.gpsLocation[1])**2) #use Bryan's equation
+                if distance > 30:
+                    # Check if point is in REDRAW list
+                    # If it is, remove it if distance greater than 30m
+                    if point in self.redraw:
+                        self.redraw.remove(point)
+                    self.makeHidden(key)
+                elif distance <= 30 and point.isVisible == False:
+                    self.makeVisible(key)
+                    # Add point to REDRAW list
+                    # self.redraw.append(point)
 
     '''
     Updates display from redraw list
@@ -190,5 +213,6 @@ class Radar:
                 self.device.drawCrumb(x, y, 0xf81f)
 
             else:
-                print('WHOOPS')
+                print('ERROR!')
         self.redraw = []
+

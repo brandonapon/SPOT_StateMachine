@@ -20,6 +20,9 @@ class SPOT(State):
 		self.radar = Radar(device)
 		device.setImageAddress()
 		device.beginTX(1)
+		device.layerMode(1)
+		device.layerEffect(2)
+		device.layer(1)
 		# self.radar.points = dict([(i, Point('point_{}'.format(i))) for i in range(0, 10)])
 		# self.radar.getDisplayCoordinates(thing1, thing2)
 
@@ -88,6 +91,7 @@ class MainState(SPOT):
 		self.parent = parent
 		parent.device.clearAll()
 		parent.device.drawMainScreen() # Main
+		parent.device.layer(1)
 		for val in parent.radar.visible:
 			parent.radar.redraw.append(val)
 		parent.radar.refresh()
@@ -106,9 +110,22 @@ class MainState(SPOT):
 		Functionality:
 		- refresh display function(updates points)
 		'''
+		print('in loop')
 		self.parent.radar.updateRadar()
 		self.parent.radar.updateRedraw()
 		self.parent.radar.refresh()
+
+		currPoint = self.parent.radar.points[1]
+		if(currPoint.currentLocation[0] > -10):
+			newTuple = (currPoint.currentLocation[0] - 0.25, currPoint.currentLocation[1])
+			currPoint.currentLocation = newTuple
+		print ('point1 = ', currPoint.currentLocation)
+
+		currPoint = self.parent.radar.points[2]
+		if(currPoint.currentLocation[1] > -10):
+			newTuple = (currPoint.currentLocation[0], currPoint.currentLocation[1] - 0.25)
+			currPoint.currentLocation = newTuple
+		print ('point2 = ', currPoint.currentLocation)
 
 class ViewState(SPOT):
 	"""
@@ -156,7 +173,7 @@ class InfoState(SPOT):
 	def __init__(self, parent, key):
 		self.parent = parent
 		parent.device.clearAll()
-		parent.device.drawSelectView()
+		parent.device.drawSelectView(parent.device.radar.points[key].type)
 		parent.device.displayTag(parent.device.radar.points[key].tag)
 		parent.device.displayDistance(parent.device.radar.points[key].distance)
 		parent.device.displayCreatedBy(parent.device.radar.points[key].createdBy)
@@ -226,12 +243,11 @@ class ConfirmState(SPOT):
 
 		parent.device.clearAll()
 		parent.device.drawAfterMark()
+		# time.sleep(0.05)
 		parent.device.prepareToSend()
-		# parent.device.draw2X(100,15,15, 0xf800)
-		parent.device.snapPic(0,0)
-		# parent.device.draw2X(150,15,15, 0xf800)
-		parent.device.conversion()
-		parent.device.beginCameraTransfer(4)
+		# parent.device.snapPic(32,0)
+		# parent.device.conversion()
+		# parent.device.beginCameraTransfer(4)
 		parent.device.writeToTX(4, 'd')
 
 
