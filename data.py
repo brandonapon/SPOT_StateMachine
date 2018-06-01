@@ -83,7 +83,19 @@ class Radar:
     Saves picture from DDR using pickle
     saves in RGB332 format
     '''
-    def savePicture(self, ddr):
+    def savePicture(self, ddr, pictureName):
+        pictureList = []
+        for val in ddr:
+            pictureList.append(val)
+        with open('{}.pkl'.format(pictureName), 'wb') as file:
+            pickle.dump(pictureList, file)
+
+    '''
+    opens saved picture
+    '''
+    def openPicture(self, ddr, pictureName):
+        with open('{}.pkl'.format(pictureName), 'rb') as file:
+            ddr = pickle.load(file)
 
     '''
     Converts meters to pixels.
@@ -157,7 +169,8 @@ class Radar:
             distance = math.sqrt((self.points[key].currentLocation[0] - self.points[key].markedLocation[0])**2 + (self.points[key].currentLocation[1] - self.points[key].markedLocation[1])**2)
             if distance >= 1:
                 # self.points[key].updateMarkedLoc()
-                self.redraw.append(key)
+                if key not in self.redraw:
+                    self.redraw.append(key)
                 # self.points[key].markedLocation = self.points[key].currentLocation
             elif distance < 1:
                 pass
@@ -179,7 +192,8 @@ class Radar:
                         self.redraw.remove(point)
                     self.makeHidden(key)
                 elif distance <= 30 and point.isVisible == False:
-                    self.makeVisible(key)
+                    # if key not in self.redraw:
+                    self.makeVisible(key)  
                     # Add point to REDRAW list
                     # self.redraw.append(point)
 
@@ -188,7 +202,8 @@ class Radar:
     '''
     def refresh(self):
         print (len(self.redraw))
-        for key in self.redraw:
+        if len(self.redraw) != 0:
+            key = self.redraw[0]
             print('Key: ' + str(key))
             point = self.points[key]
             print('TYPE: ' + point.type)
@@ -214,5 +229,6 @@ class Radar:
 
             else:
                 print('ERROR!')
-        self.redraw = []
-
+            self.redraw.pop(0)
+        else:
+            pass

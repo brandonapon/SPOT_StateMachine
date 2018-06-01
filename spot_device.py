@@ -94,6 +94,7 @@ class MainState(SPOT):
 		parent.device.layer(1)
 		for val in parent.radar.visible:
 			parent.radar.redraw.append(val)
+		print (parent.radar.redraw)
 		parent.radar.refresh()
 
 		#REDRAW ALL VISIBLE
