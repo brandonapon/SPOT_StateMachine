@@ -116,17 +116,17 @@ class MainState(SPOT):
 		self.parent.radar.updateRedraw()
 		self.parent.radar.refresh()
 
-		currPoint = self.parent.radar.points[1]
-		if(currPoint.currentLocation[0] > -10):
-			newTuple = (currPoint.currentLocation[0] - 0.25, currPoint.currentLocation[1])
-			currPoint.currentLocation = newTuple
-		print ('point1 = ', currPoint.currentLocation)
-
-		currPoint = self.parent.radar.points[2]
-		if(currPoint.currentLocation[1] > -10):
-			newTuple = (currPoint.currentLocation[0], currPoint.currentLocation[1] - 0.25)
-			currPoint.currentLocation = newTuple
-		print ('point2 = ', currPoint.currentLocation)
+		# currPoint = self.parent.radar.points[1]
+		# if(currPoint.currentLocation[0] > -10):
+		# 	newTuple = (currPoint.currentLocation[0] - 0.25, currPoint.currentLocation[1])
+		# 	currPoint.currentLocation = newTuple
+		# print ('point1 = ', currPoint.currentLocation)
+		#
+		# currPoint = self.parent.radar.points[2]
+		# if(currPoint.currentLocation[1] > -10):
+		# 	newTuple = (currPoint.currentLocation[0], currPoint.currentLocation[1] - 0.25)
+		# 	currPoint.currentLocation = newTuple
+		# print ('point2 = ', currPoint.currentLocation)
 
 class ViewState(SPOT):
 	"""
@@ -140,10 +140,13 @@ class ViewState(SPOT):
 	def __init__(self, parent):
 		self.parent = parent
 		parent.device.clearAll()
+		time.sleep(0.05)
 		parent.device.drawViewScreen() # View
-		""" ADDED """
-		# parent.device.layer(1)
-		# points = parent.device.radar.points
+		for val in parent.radar.visible:
+			parent.radar.redraw.append(val)
+		print (parent.radar.redraw)
+		while len(parent.radar.redraw) != 0:
+			parent.radar.refresh()
 		""" >> DRAW POINTS HERE << """
 
 	def on_event(self, event):
@@ -153,7 +156,7 @@ class ViewState(SPOT):
 		if event == 'TOP':
 			return MainState(self.parent)
 		elif event == 'BOTTOM':
-			return InfoState(self.parent, )
+			return InfoState(self.parent, 1)
 		return self
 
 	def loop(self):
@@ -174,10 +177,16 @@ class InfoState(SPOT):
 	def __init__(self, parent, key):
 		self.parent = parent
 		parent.device.clearAll()
-		parent.device.drawSelectView(parent.device.radar.points[key].type)
-		parent.device.displayTag(parent.device.radar.points[key].tag)
-		parent.device.displayDistance(parent.device.radar.points[key].distance)
-		parent.device.displayCreatedBy(parent.device.radar.points[key].createdBy)
+		time.sleep(0.05)
+		point = parent.radar.points[key]
+		parent.device.drawInfoState()
+		if point.type == 'DANGER':
+			parent.device.write_CUSTOM(point.type, 200, 265, 0xf800)
+		else:
+			parent.device.write_CUSTOM(point.type, 200, 265, 0x07e8)
+		parent.device.write_CUSTOM(point.tag, 190, 315, 0xffff) # Variable tag
+		parent.device.write_CUSTOM(str(point.distance), 270, 365, 0xffff) # Variable distance
+		parent.device.write_CUSTOM(point.createdBy, 300, 415, 0xffff) # Variable c/b
 
 	def on_event(self, event):
 		if event == 'TOP':
@@ -240,16 +249,15 @@ class ConfirmState(SPOT):
 		""" ADDED """
 		# distance = parent.device.range_poll()
 		# gps = parent.device.readFromGPS()
-		# pic = parent.device.snapPic(0,0)
 
 		parent.device.clearAll()
 		parent.device.drawAfterMark()
-		# time.sleep(0.05)
-		parent.device.prepareToSend()
-		# parent.device.snapPic(32,0)
+		time.sleep(0.05)
+		# parent.device.prepareToSend()
+		parent.device.snapPic(100,0)
 		# parent.device.conversion()
 		# parent.device.beginCameraTransfer(4)
-		parent.device.writeToTX(4, 'd')
+		# parent.device.writeToTX(4, 'd')
 
 
 	def on_event(self, event):
@@ -280,12 +288,18 @@ class AlertState(SPOT):
 	button = ''
 	parent = None
 
-	def __init__(self, parent):
+	def __init__(self, parent, key):
 		self.parent = parent
-		""" ADDED """
-		# parent.device.play_sequence([16, -100, 16, -100, 16, -50, 16])
 		parent.device.clearAll()
 		parent.device.drawAlertInterest() # Main
+		point = parent.radar.points[key]
+		if point.type == 'DANGER':
+			parent.device.write_CUSTOM(point.type, 200, 265, 0xf800)
+		else:
+			parent.device.write_CUSTOM(point.type, 200, 265, 0x07e8)
+		parent.device.write_CUSTOM(point.tag, 190, 315, 0xffff) # Variable tag
+		parent.device.write_CUSTOM(str(point.distance), 270, 365, 0xffff) # Variable distance
+		parent.device.write_CUSTOM(point.createdBy, 300, 415, 0xffff) # Variable c/b
 
 	def on_event(self, event):
 		if event == 'TOP':

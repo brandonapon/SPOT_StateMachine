@@ -57,6 +57,8 @@ class Radar:
         self.redraw = [] # list of KEYS of points to be redrawn
         self.userLocation = (0,0) # GPS location of USER
         self.device = device
+        self.tags = ['None', 'Crater', 'Gas', 'Obstacle', 'None', 'Rock', 'Sample', 'Liquid'] #0:3 danger, 4:8 interest
+        self.tag = ''
 
     '''
     Add point to dictionary of all POINTS
@@ -193,7 +195,7 @@ class Radar:
                     self.makeHidden(key)
                 elif distance <= 30 and point.isVisible == False:
                     # if key not in self.redraw:
-                    self.makeVisible(key)  
+                    self.makeVisible(key)
                     # Add point to REDRAW list
                     # self.redraw.append(point)
 
