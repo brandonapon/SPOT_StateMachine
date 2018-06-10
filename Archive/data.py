@@ -76,15 +76,11 @@ class Radar:
 	gpsLoc = tuple
 	objectType = string
 	'''
-	def createPoint(self, id, tag, createdBy, gpsLoc, distance, objectType, cameraList):
+	def createPoint(self, id, tag, createdBy, gpsLoc, objectType, cameraList):
 		newPoint = Point(str(id))
 		newPoint.tag = tag
 		newPoint.createdBy = createdBy
-		# newPoint.gpsLocation = gpsLoc
-		newPoint.currentLocation = gpsLoc 
-		print('passed in distance', distance)
-		newPoint.distance = distance
-		print('saved distance', newPoint.distance)
+		newPoint.gpsLocation = gpsLoc
 		newPoint.type = objectType
 		newPoint.picture = str(id)
 		with open('{}.pkl'.format(id), 'wb') as file:
@@ -120,7 +116,6 @@ class Radar:
 	'''
 	def convertToPixels(self, x, y):
 		return x * 7, y * 7
-		# return x*21, y*21
 
 	'''
 	Shifts from center location (266, 240).
@@ -214,8 +209,8 @@ class Radar:
 	'''
 	def updateRedraw(self):
 		for key in self.visible:
-			distance = math.sqrt((self.points[key].currentLocation[0] - self.points[key].markedLocation[0])**2 + (self.points[key].currentLocation[1] - self.points[key].markedLocation[1])**2)
-			# distance = math.sqrt(point.currentLocation[0]**2 + point.currentLocation[1]**2)
+			# distance = math.sqrt((self.points[key].currentLocation[0] - self.points[key].markedLocation[0])**2 + (self.points[key].currentLocation[1] - self.points[key].markedLocation[1])**2)
+			distance = math.sqrt(point.currentLocation[0]**2 + point.currentLocation[1]**2)
 			if distance >= 1:
 				# self.points[key].updateMarkedLoc()
 				if key not in self.redraw:
@@ -231,9 +226,12 @@ class Radar:
 	'''
 	def updateRadar(self):
 		for key, point in self.points.items():
-			distance = math.sqrt((self.userLocation[0] - point.currentLocation[0])**2 + (self.userLocation[1] - point.currentLocation[1])**2)
-			# distance = math.sqrt(point.currentLocation[0]**2 + point.currentLocation[1]**2)
-			# point.distance = distance
+			pointLocation = self.gpsToCartesian(point.gpsLocation)
+			self.userLocationCartesian = self.gpsToCartesian(self.userLocation)
+			point.currentLocation = (pointLocation[0] - self.userLocationCartesian[0], pointLocation[1] - self.userLocationCartesian[1])
+			# distance = math.sqrt((self.userLocation[0] - point.currentLocation[0])**2 + (self.userLocation[1] - point.currentLocation[1])**2)
+			distance = math.sqrt(point.currentLocation[0]**2 + point.currentLocation[1]**2)
+			point.distance = distance
 			if distance > 30:
 				# Check if point is in REDRAW list
 				# If it is, remove it if distance greater than 30m

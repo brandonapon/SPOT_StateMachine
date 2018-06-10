@@ -2,6 +2,7 @@ from pynq.lib.arduino.state import State
 from pynq.lib.arduino.data import *
 import asyncio
 import time
+import math
 
 class SPOT(State):
 	"""
@@ -11,6 +12,8 @@ class SPOT(State):
 	state = None
 	device = None
 	radar = None
+	createdBy = 'SPOT'
+	count = 0
 
 	def __init__(self, device):
 		"""
@@ -90,12 +93,16 @@ class MainState(SPOT):
 		'''
 		self.parent = parent
 		parent.device.clearAll()
+		time.sleep(0.05)
 		parent.device.drawMainScreen() # Main
 		parent.device.layer(1)
 		for val in parent.radar.visible:
 			parent.radar.redraw.append(val)
-		print (parent.radar.redraw)
-		parent.radar.refresh()
+		while len(parent.radar.redraw) != 0:
+			parent.radar.refresh()
+		# print('init print', parent.radar.points[0].distance)
+		# print (parent.radar.redraw)
+
 
 		#REDRAW ALL VISIBLE
 
@@ -104,6 +111,10 @@ class MainState(SPOT):
 			return ViewState(self.parent)
 		elif event == 'BOTTOM':
 			return MarkState(self.parent)
+		# elif event == "CCW":
+		# 	print('CCW')
+		# elif event == "CW":
+		# 	print('CW')
 		return self
 
 	def loop(self):
@@ -111,20 +122,20 @@ class MainState(SPOT):
 		Functionality:
 		- refresh display function(updates points)
 		'''
-		print('in loop')
+		# print('in loop')
 		self.parent.radar.updateRadar()
 		self.parent.radar.updateRedraw()
 		self.parent.radar.refresh()
 
-		# currPoint = self.parent.radar.points[1]
+		# currPoint = self.parent.radar.points[0]
 		# if(currPoint.currentLocation[0] > -10):
-		# 	newTuple = (currPoint.currentLocation[0] - 0.25, currPoint.currentLocation[1])
+		# 	newTuple = (currPoint.currentLocation[0] - 0.5, currPoint.currentLocation[1] - 1)
 		# 	currPoint.currentLocation = newTuple
 		# print ('point1 = ', currPoint.currentLocation)
-		#
-		# currPoint = self.parent.radar.points[2]
+		
+		# currPoint = self.parent.radar.points[1]
 		# if(currPoint.currentLocation[1] > -10):
-		# 	newTuple = (currPoint.currentLocation[0], currPoint.currentLocation[1] - 0.25)
+		# 	newTuple = (currPoint.currentLocation[0] - 0.5, currPoint.currentLocation[1] - 1)
 		# 	currPoint.currentLocation = newTuple
 		# print ('point2 = ', currPoint.currentLocation)
 
@@ -136,18 +147,27 @@ class ViewState(SPOT):
 	button_pressed = False
 	button = ''
 	parent = None
+	select = 0
 
 	def __init__(self, parent):
 		self.parent = parent
 		parent.device.clearAll()
 		time.sleep(0.05)
 		parent.device.drawViewScreen() # View
+		parent.radar.redraw = []
 		for val in parent.radar.visible:
 			parent.radar.redraw.append(val)
-		print (parent.radar.redraw)
+		print ('redraw list', parent.radar.redraw)
+		print ('visible list', parent.radar.visible)
 		while len(parent.radar.redraw) != 0:
 			parent.radar.refresh()
-		""" >> DRAW POINTS HERE << """
+		# print('choosing point')
+		# print('select', self.select)
+		# print(parent.radar.points)
+		if(len(self.parent.radar.visible) != 0):
+			point = parent.radar.points.get(self.parent.radar.visible[self.select])
+			parent.radar.drawSelectBox(point, 0xffe0)
+
 
 	def on_event(self, event):
 		'''
@@ -156,7 +176,26 @@ class ViewState(SPOT):
 		if event == 'TOP':
 			return MainState(self.parent)
 		elif event == 'BOTTOM':
-			return InfoState(self.parent, 1)
+			if(len(self.parent.radar.visible) != 0):
+				return InfoState(self.parent, self.parent.radar.visible[self.select])
+		elif event == "LEFT":
+			if(len(self.parent.radar.visible) != 0):
+				point = self.parent.radar.points.get(self.parent.radar.visible[self.select])
+				self.parent.radar.drawSelectBox(point, 0x0000)
+				time.sleep(0.05)
+				self.select -= 1
+				self.select = self.select % len(self.parent.radar.visible)
+				point = self.parent.radar.points.get(self.parent.radar.visible[self.select])
+				self.parent.radar.drawSelectBox(point, 0xffe0)
+		elif event == "RIGHT":
+			if(len(self.parent.radar.visible) != 0):
+				point = self.parent.radar.points.get(self.parent.radar.visible[self.select])
+				self.parent.radar.drawSelectBox(point, 0x0000)
+				time.sleep(0.05)
+				self.select += 1
+				self.select = self.select % len(self.parent.radar.visible)
+				point = self.parent.radar.points.get(self.parent.radar.visible[self.select])
+				self.parent.radar.drawSelectBox(point, 0xffe0)
 		return self
 
 	def loop(self):
@@ -178,15 +217,20 @@ class InfoState(SPOT):
 		self.parent = parent
 		parent.device.clearAll()
 		time.sleep(0.05)
-		point = parent.radar.points[key]
+		point = parent.radar.points.get(key)
+		print('key', key)
 		parent.device.drawInfoState()
 		if point.type == 'DANGER':
 			parent.device.write_CUSTOM(point.type, 200, 265, 0xf800)
 		else:
 			parent.device.write_CUSTOM(point.type, 200, 265, 0x07e8)
 		parent.device.write_CUSTOM(point.tag, 190, 315, 0xffff) # Variable tag
-		parent.device.write_CUSTOM(str(point.distance), 270, 365, 0xffff) # Variable distance
+		print('writing distance')
+		print(point.distance)
+		parent.device.write_CUSTOM(str(point.distance)+'m', 270, 365, 0xffff) # Variable distance
 		parent.device.write_CUSTOM(point.createdBy, 300, 415, 0xffff) # Variable c/b
+		val = parent.radar.openPicture(parent.device.drawAddr, point.picture)
+		parent.device.drawImage(100,10)
 
 	def on_event(self, event):
 		if event == 'TOP':
@@ -214,6 +258,7 @@ class MarkState(SPOT):
 	def __init__(self, parent):
 		self.parent = parent
 		parent.device.clearAll()
+		time.sleep(0.05)
 		parent.device.drawMarkScreen()
 		# parent.device.beginTX(1)
 
@@ -239,38 +284,119 @@ class ConfirmState(SPOT):
 	button_pressed = False
 	button = ''
 	parent = None
-
-	global counter
+	counter = 0
+	tag = ''
+	objectType = ''
+	imuVal = ''
+	imuVector = None
+	rangeVal = ''
+	range = 0
 
 	# self.point = Point()
 
 	def __init__(self, parent):
 		self.parent = parent
-		""" ADDED """
 		# distance = parent.device.range_poll()
 		# gps = parent.device.readFromGPS()
 
 		parent.device.clearAll()
 		parent.device.drawAfterMark()
 		time.sleep(0.05)
+		self.imuVal, self.rangeVal, self.range = parent.device.prepareToSend()
+		self.imuVector = parent.device.get_euler()
 		# parent.device.prepareToSend()
-		parent.device.snapPic(100,0)
-		# parent.device.conversion()
-		# parent.device.beginCameraTransfer(4)
-		# parent.device.writeToTX(4, 'd')
-
+		parent.device.play_sequence([16])
+		time.sleep(1)
+		parent.device.stop()
+		parent.device.snapPic(100,10)
+		self.objectType = 'DANGER'
+		self.tag = parent.radar.tags[0]
+		self.parent.radar.drawTypeBox(0x2104)
+		self.parent.radar.drawTagBox(0x2104)
+		parent.device.write_CUSTOM(self.tag, 185, 315, 0xffff) # Variable tag
+		parent.device.write_CUSTOM('DANGER', 200, 265, 0xf800) # Variable type	
+		# print('range val')	
+		parent.device.write_CUSTOM(str(round(float(self.range/100.0),2)) + 'm', 270, 365, 0xffff) # Variable distance
+		print(str(round(float(self.range/100.0),2)))
+		# print('createdBy')
+		parent.device.write_CUSTOM(parent.createdBy, 300, 415, 0xffff) # Variable c/b
 
 	def on_event(self, event):
 		if event == 'TOP':
 			return MarkState(self.parent)
 		elif event == 'BOTTOM':
-			""" ADDED """
 			# parent.device.beginCameraTransfer(""" >> NEED ADDRESS << """)
-			# stamp = createTimestamp()
-			# self.point.name = 'point_{}'.format(stamp)
-			# self.point.name = 'point_{}'.format(counter)
-			# counter = counter + 1
+			# print('making pictureList')
+			pictureList = []
+			# print('writing image data')
+			for index in range(76800):
+				pictureList.append(self.parent.device.drawAddr[index])
+			# print('creatingpoint')
+			# print(self.range)
+			# print(str(round(float(self.range/100.0),2)))
+			rangeMeter = float(self.range/100.0)
+			print('rangeMeter', rangeMeter)
+			angle = self.imuVector[0]
+			print('angle', angle)
+			x_axis = round(math.sin(math.radians(angle))*rangeMeter,2)
+			y_axis = round(math.cos(math.radians(angle))*rangeMeter,2)
+			pointLocation = (x_axis, y_axis)
+			print('pointLocation', pointLocation)
+			self.parent.radar.createPoint(len(self.parent.radar.points), self.tag, self.parent.createdBy, pointLocation, str(round(float(self.range/100.0),2)), self.objectType, pictureList)
+			print('sending imu')
+			self.parent.device.writeToTX(4, self.imuVal)
+			print('sending range')
+			self.parent.device.writeToTX(4, self.rangeVal)
+			print('sending tag')
+			self.parent.device.writeToTX(4, "t,"+ self.tag + "!")
+			# print('saving image')
+			# parent.radar.savePicture(parent.device.drawAddr, 'picture'+str(parent.count))
+			# parent.count += 1
+			print('image conversion')
+			self.parent.device.conversion()
+			print('sending image')
+			self.parent.device.beginCameraTransfer(4)
+			self.parent.device.writeToTX(4, 'd')	
+			print('exiting bottom state')
 			return MainState(self.parent)
+
+		elif event == 'RIGHT': # Right button
+			# First wipe the text area with a black box, then write the selected text
+			# self.parent.device.play_sequence([16])
+			self.parent.radar.drawTagBox(0x2104)
+			self.counter += 1
+			if (self.counter % len(self.parent.radar.tags)) < 4:
+				self.parent.radar.drawTypeBox(0x2104)
+				self.objectType = 'DANGER'
+				self.parent.device.write_CUSTOM('DANGER', 200, 265, 0xf800) # Variable tag
+			elif (self.counter % len(self.parent.radar.tags)) < 8:
+				self.parent.radar.drawTypeBox(0x2104)
+				self.objectType = 'INTEREST'
+				self.parent.device.write_CUSTOM('INTEREST', 200, 265, 0x07e8) # Variable tag
+			else:
+				self.objectType = 'NONE'
+			self.parent.device.write_CUSTOM(self.parent.radar.tags[self.counter % len(self.parent.radar.tags)], 190, 315, 0xffff) # Variable tag
+			self.tag = self.parent.radar.tags[self.counter % len(self.parent.radar.tags)]
+
+			# self.parent.device.stop()
+		elif event == 'LEFT':
+			# First wipe the text area with a black box, then write the selected text
+			# self.parent.device.play_sequence([16])
+			self.parent.radar.drawTagBox(0x2104)
+			self.counter -= 1
+			if (self.counter % len(self.parent.radar.tags)) < 4:
+				self.parent.radar.drawTypeBox(0x2104)
+				self.objectType = 'DANGER'
+				self.parent.device.write_CUSTOM('DANGER', 200, 265, 0xf800) # Variable tag
+			elif (self.counter % len(self.parent.radar.tags)) < 8:
+				self.parent.radar.drawTypeBox(0x2104)
+				self.objectType = 'INTEREST'
+				self.parent.device.write_CUSTOM('INTEREST', 200, 265, 0x07e8) # Variable tag
+			else:
+				self.objectType = 'NONE'
+			self.parent.device.write_CUSTOM(self.parent.radar.tags[self.counter % len(self.parent.radar.tags)], 190, 315, 0xffff) # Variable tag
+			self.tag = self.parent.radar.tags[self.counter % len(self.parent.radar.tags)]
+			# self.parent.device.stop()
 		return self
 
 	def loop(self):
@@ -287,12 +413,15 @@ class AlertState(SPOT):
 	button_pressed = False
 	button = ''
 	parent = None
+	state = None
 
-	def __init__(self, parent, key):
+	def __init__(self, parent, key, lastState):
+		self.state = lastState
 		self.parent = parent
 		parent.device.clearAll()
-		parent.device.drawAlertInterest() # Main
+		parent.device.drawAlertState()
 		point = parent.radar.points[key]
+		point.ack = True
 		if point.type == 'DANGER':
 			parent.device.write_CUSTOM(point.type, 200, 265, 0xf800)
 		else:
@@ -300,12 +429,12 @@ class AlertState(SPOT):
 		parent.device.write_CUSTOM(point.tag, 190, 315, 0xffff) # Variable tag
 		parent.device.write_CUSTOM(str(point.distance), 270, 365, 0xffff) # Variable distance
 		parent.device.write_CUSTOM(point.createdBy, 300, 415, 0xffff) # Variable c/b
+		val = parent.radar.openPicture(parent.device.drawAddr, point.picture)
+		parent.device.drawImage(100,10)
 
 	def on_event(self, event):
-		if event == 'TOP':
-			return MainState(self.parent)
-		elif event == 'BOTTOM':
-			return InfoState(self.parent, key)
+		if event == 'BOTTOM':
+			return type(self.state)(self.parent)
 		return self
 
 	def loop(self):
